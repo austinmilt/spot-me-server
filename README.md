@@ -17,15 +17,23 @@ to the class path of the function
 </plugin>
 ```
 
+
+Next, define the following environment variables (or get a shell script from me to run):
+```
+OPEN_AI_API_KEY
+```
+
 Then run `mvn function:run`
 
 
 ## Deploying a function
 
-Build the jar with `mvn package` and then run
+First, get environment variables yaml (.env.yaml).
+
+Next, build the jar with `mvn package` and then run
 
 ```
-gcloud functions deploy spot-me-hello-world --entry-point com.austinmilt.spotme.HelloWorld --runtime java11 --trigger-http --source target --memory 512MB --project wgmi-cc
+gcloud functions deploy spot-me-recommendations --env-vars-file .env.yaml --entry-point com.austinmilt.spotme.RecommendedProductsHandler --runtime java11 --trigger-http --memory 512MB --project wgmi-cc
 ```
 
 Replace `spot-me-hello-world` with the name the deployed function should have,
