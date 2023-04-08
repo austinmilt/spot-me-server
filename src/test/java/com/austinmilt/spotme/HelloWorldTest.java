@@ -1,4 +1,4 @@
-package com.austinmilt.spot-me;
+package com.austinmilt.spotme;
 
 import static org.junit.Assert.assertTrue;
 
@@ -7,14 +7,13 @@ import org.junit.Test;
 /**
  * Unit test for simple App.
  */
-public class AppTest 
+public class HelloWorldTest
 {
     /**
      * Rigorous Test :-)
      */
     @Test
-    public void shouldAnswerWithTrue()
-    {
+    public void shouldAnswerWithTrue() {
         assertTrue( true );
     }
 }
