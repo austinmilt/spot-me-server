@@ -13,6 +13,8 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class SpotifyClient {
+    private static final Gson GSON = new Gson();
+
     private final OkHttpClient httpClient;
 
     private SpotifyClient(final OkHttpClient httpClient) {
@@ -59,7 +61,7 @@ public class SpotifyClient {
         final Response response = httpClient.newCall(request).execute();
         if (response.isSuccessful()) {
             final String resultString = response.body().string();
-            final SavedTracksResponse savedTracks = new Gson().fromJson(resultString, SavedTracksResponse.class);
+            final SavedTracksResponse savedTracks = GSON.fromJson(resultString, SavedTracksResponse.class);
             return savedTracks.getItems()
                     .stream()
                     .map(SavedTracksResponse.SavedTracksItem::getTrack)
@@ -67,9 +69,11 @@ public class SpotifyClient {
                     .map(SavedTracksResponse.Artist::getId)
                     .collect(Collectors.toSet());
 
+        } else if (response.code() == 403) {
+            throw SpotifyException.notAllowlisted();
+
         } else {
-            // TODO better
-            throw new RuntimeException("Invalid response with code " + response.code());
+            throw SpotifyException.general("Invalid response with HTTP code " + response.code());
         }
     }
 
@@ -101,9 +105,11 @@ public class SpotifyClient {
                     .flatMap(genres -> genres.stream())
                     .collect(Collectors.toSet());
 
+        } else if (response.code() == 403) {
+            throw SpotifyException.notAllowlisted();
+
         } else {
-            // TODO better
-            throw new RuntimeException("Invalid response with code " + response.code());
+            throw SpotifyException.general("Invalid response with HTTP code " + response.code());
         }
     }
 }
