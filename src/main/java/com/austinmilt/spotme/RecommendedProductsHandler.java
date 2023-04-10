@@ -1,9 +1,11 @@
 package com.austinmilt.spotme;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import com.austinmilt.spotme.gpt.OpenAiClient;
+import com.austinmilt.spotme.spotify.GenreMetadata;
 import com.austinmilt.spotme.spotify.SpotifyClient;
 import com.austinmilt.spotme.spotify.SpotifyException;
 import com.google.cloud.functions.HttpFunction;
@@ -48,10 +50,10 @@ public class RecommendedProductsHandler implements HttpFunction {
 
         try {
             final String accessToken = accessTokenOption.get();
-            final Set<String> genres = spotifyClient.getSavedTrackGenres(accessToken);
-            final Set<String> recommendations = openAiClient.getProductRecommendations(genres);
+            final Map<String, GenreMetadata> genres = spotifyClient.getSavedTrackGenres(accessToken);
+            final Set<String> recommendations = openAiClient.getProductRecommendations(genres.keySet());
             response.setStatusCode(200);
-            response.getWriter().write(ApiResponse.ok(recommendations).toResponseJson());
+            response.getWriter().write(ApiResponse.ok(Result.of(recommendations, genres)).toResponseJson());
 
         } catch (SpotifyException e) {
             if (e.geCode() == SpotifyException.Code.NOT_ALLOWLISTED) {
@@ -65,6 +67,28 @@ public class RecommendedProductsHandler implements HttpFunction {
         } catch (Exception e) {
             response.setStatusCode(500);
             response.getWriter().write(ApiResponse.serverError(e.getMessage()).toResponseJson());
+        }
+    }
+
+    private static class Result {
+        private final Set<String> recommendations;
+        private final Map<String, GenreMetadata> genres;
+
+        private Result(final Set<String> recommendations, final Map<String, GenreMetadata> genres) {
+            this.recommendations = recommendations;
+            this.genres = genres;
+        }
+
+        public static Result of(final Set<String> recommendations, final Map<String, GenreMetadata> genres) {
+            return new Result(recommendations, genres);
+        }
+
+        public Set<String> getRecommendations() {
+            return recommendations;
+        }
+
+        public Map<String, GenreMetadata> getGenres() {
+            return genres;
         }
     }
 }

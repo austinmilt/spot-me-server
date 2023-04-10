@@ -1,10 +1,14 @@
 package com.austinmilt.spotme.spotify;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.austinmilt.spotme.Env;
 import com.google.gson.Gson;
 
 import okhttp3.HttpUrl;
@@ -33,7 +37,7 @@ public class SpotifyClient {
                 .build();
     }
 
-    public Set<String> getSavedTrackGenres(final String accessToken) throws IOException {
+    public Map<String, GenreMetadata> getSavedTrackGenres(final String accessToken) throws IOException {
         final Set<String> savedTrackArtistIds = getSavedTrackArtistIds(accessToken);
         return getArtistGenres(savedTrackArtistIds, accessToken);
     }
@@ -78,7 +82,10 @@ public class SpotifyClient {
     }
 
     // https://developer.spotify.com/documentation/web-api/reference/get-multiple-artists
-    private Set<String> getArtistGenres(final Set<String> artistIds, final String accessToken) throws IOException {
+    private Map<String, GenreMetadata> getArtistGenres(
+            final Set<String> artistIds,
+            final String accessToken) throws IOException {
+
         final HttpUrl url = new HttpUrl.Builder()
                 .scheme("https")
                 .host("api.spotify.com")
@@ -98,12 +105,18 @@ public class SpotifyClient {
         final Response response = httpClient.newCall(request).execute();
         if (response.isSuccessful()) {
             final String resultString = response.body().string();
-            final GetArtistsResponse artistsResponse = new Gson().fromJson(resultString, GetArtistsResponse.class);
-            return artistsResponse.getArtists()
-                    .stream()
-                    .map(GetArtistsResponse.Artist::getGenres)
-                    .flatMap(genres -> genres.stream())
-                    .collect(Collectors.toSet());
+            final GetArtistsResponse artistsResponse = GSON.fromJson(resultString, GetArtistsResponse.class);
+            final Map<String, GenreMetadata> result = new HashMap<>();
+            for (GetArtistsResponse.Artist artist : artistsResponse.getArtists()) {
+                final GenreMetadata.Artist artistMeta = GenreMetadata.Artist.of(artist.getName(),
+                        artist.getExternalUrls().get("spotify"),
+                        selectArtistImage(artist.getImages()));
+
+                for (String genre : artist.getGenres()) {
+                    result.computeIfAbsent(genre, g -> new GenreMetadata()).addArtist(artistMeta);
+                }
+            }
+            return result;
 
         } else if (response.code() == 403) {
             throw SpotifyException.notAllowlisted();
@@ -111,5 +124,21 @@ public class SpotifyClient {
         } else {
             throw SpotifyException.general("Invalid response with HTTP code " + response.code());
         }
+    }
+
+    private String selectArtistImage(List<Image> images) {
+        if (images.size() == 0) {
+            return null;
+        }
+        Image closestImage = images.get(0);
+        int closestSizeDiff = Math.abs(closestImage.getWidth() - Env.ARTIST_IMAGE_TARGET_WIDTH_PIXELS);
+        for (int i = 1; i < images.size(); i++) {
+            final int sizeDiff = Math.abs(images.get(i).getWidth() - Env.ARTIST_IMAGE_TARGET_WIDTH_PIXELS);
+            if (sizeDiff < closestSizeDiff) {
+                closestImage = images.get(i);
+                closestSizeDiff = sizeDiff;
+            }
+        }
+        return closestImage.getUrl();
     }
 }

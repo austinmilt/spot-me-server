@@ -7,6 +7,7 @@ public class Env {
 
     public static final String OPEN_AI_API_KEY = parseString("OPEN_AI_API_KEY");
     public static final int GENRE_SAMPLE_SIZE = parseInt("GENRE_SAMPLE_SIZE");
+    public static final int ARTIST_IMAGE_TARGET_WIDTH_PIXELS = parseInt("ARTIST_IMAGE_TARGET_WIDTH_PIXELS");
 
     private static int parseInt(final String key) {
         final String candidate = parseString(key);
