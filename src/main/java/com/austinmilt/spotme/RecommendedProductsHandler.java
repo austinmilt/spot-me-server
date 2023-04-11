@@ -51,9 +51,12 @@ public class RecommendedProductsHandler implements HttpFunction {
         try {
             final String accessToken = accessTokenOption.get();
             final Map<String, GenreMetadata> genres = spotifyClient.getSavedTrackGenres(accessToken);
-            final Set<String> recommendations = openAiClient.getProductRecommendations(genres.keySet());
+            final Set<String> genreKeys = genres.keySet();
+            final String flierImageUrl = openAiClient.getConcertFlierImage(genreKeys);
+            final Set<String> recommendations = openAiClient.getProductRecommendations(genreKeys);
             response.setStatusCode(200);
-            response.getWriter().write(ApiResponse.ok(Result.of(recommendations, genres)).toResponseJson());
+            response.getWriter()
+                    .write(ApiResponse.ok(Result.of(recommendations, genres, flierImageUrl)).toResponseJson());
 
         } catch (SpotifyException e) {
             if (e.geCode() == SpotifyException.Code.NOT_ALLOWLISTED) {
@@ -73,14 +76,22 @@ public class RecommendedProductsHandler implements HttpFunction {
     private static class Result {
         private final Set<String> recommendations;
         private final Map<String, GenreMetadata> genres;
+        private final String flierUrl;
 
-        private Result(final Set<String> recommendations, final Map<String, GenreMetadata> genres) {
+        private Result(
+                final Set<String> recommendations,
+                final Map<String, GenreMetadata> genres,
+                final String flierUrl) {
             this.recommendations = recommendations;
             this.genres = genres;
+            this.flierUrl = flierUrl;
         }
 
-        public static Result of(final Set<String> recommendations, final Map<String, GenreMetadata> genres) {
-            return new Result(recommendations, genres);
+        public static Result of(
+                final Set<String> recommendations,
+                final Map<String, GenreMetadata> genres,
+                final String flierUrl) {
+            return new Result(recommendations, genres, flierUrl);
         }
 
         public Set<String> getRecommendations() {
@@ -89,6 +100,10 @@ public class RecommendedProductsHandler implements HttpFunction {
 
         public Map<String, GenreMetadata> getGenres() {
             return genres;
+        }
+
+        public String getFlierUrl() {
+            return flierUrl;
         }
     }
 }
